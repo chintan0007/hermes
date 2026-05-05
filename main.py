@@ -2,7 +2,7 @@ import asyncio
 import logging
 import json
 import os
-import requests
+import aiohttp
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -47,7 +47,9 @@ class PolymarketAlphaBot:
                 "text": message,
                 "parse_mode": "Markdown"
             }
-            requests.get(url, params=params, timeout=10)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    await resp.json()
         except Exception as e:
             logger.error(f"Failed to send Telegram message: {e}")
 
@@ -70,7 +72,7 @@ class PolymarketAlphaBot:
             with open(self.knowledge_base_path, "r") as f:
                 try:
                     data = json.load(f)
-                except:
+                except (json.JSONDecodeError, IOError):
                     data = []
 
         data.append(entry)
@@ -100,8 +102,8 @@ class PolymarketAlphaBot:
                 }
                 
                 # STEP 2: Risk Management
-                bankroll = 1000.0 
-proposed_size_pct = self.risk_manager.calculate_quarter_kelly(
+                bankroll = 1000.0
+                proposed_size_pct = self.risk_manager.calculate_quarter_kelly(
                     bankroll, 
                     mock_prediction['win_probability'], 
                     mock_prediction['edge']
@@ -140,22 +142,28 @@ proposed_size_pct = self.risk_manager.calculate_quarter_kelly(
                 logger.error(f"Critical error in main loop: {e}")
                 await asyncio.sleep(60)
 
-if __name__ == "__main__":
-    # Diagnostic Check on Startup
+async def check_telegram_diagnostic():
+    """Async diagnostic check for Telegram connectivity"""
     print("--- DIAGNOSTIC START ---")
     try:
         token = os.getenv("TELEGRAM_TOKEN")
         chat_id = os.getenv("TELEGRAM_CHAT_ID")
         print(f"DEBUG: Token present: {bool(token)}, ChatID present: {bool(chat_id)}")
         if token:
-            test_res = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=10)
-            print(f"Telegram GetMe Result: {test_res.json()}")
+            url = f"https://api.telegram.org/bot{token}/getMe"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    result = await resp.json()
+                    print(f"Telegram GetMe Result: {result}")
         else:
             print("DEBUG: TELEGRAM_TOKEN is MISSING in environment variables!")
     except Exception as e:
         print(f"Diagnostic Error: {e}")
     print("--- DIAGNOSTIC END ---")
 
+if __name__ == "__main__":
+    asyncio.run(check_telegram_diagnostic())
+    
     bot = PolymarketAlphaBot()
     try:
         asyncio.run(bot.run_trading_cycle())
