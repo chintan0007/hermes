@@ -10,24 +10,23 @@ from dotenv import load_dotenv
 # 1. IMPORT THE SYNTHESIZED COMPONENTS
 try:
     import sys
-    # This handles your nested folder structure
+    # This handles your specific folder structure: Kronos/Kronos-master/model/
     sys.path.append(os.path.join(os.getcwd(), "Kronos/Kronos-master"))
     from model.kronos import KronosModel 
     KRONOS_AVAILABLE = True
-except ImportError:
+except Exception as e:
     KRONOS_AVAILABLE = False
+    print(f"⚠️ KRONOS Warning: {e}")
 
-# Import the engine components
 try:
     from engine.risk_manager import RiskManager
     from engine.executor import PolymarketExecutor
 except ImportError as e:
-    print(f"CRITICAL ERROR: Engine components missing! {e}")
+    print(f"❌ CRITICAL ERROR: Engine components missing! {e}")
     exit(1)
 
 load_dotenv()
 
-# Setup Logging
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -57,12 +56,8 @@ class PolymarketAlphaBot:
         self.wins = 0
         self.losses = 0
         
-        # Initialize Kronos if available
         self.ml_engine = KronosModel() if KRONOS_AVAILABLE else None
-        
         logger.info(f"INTEGRATED BOT INITIALIZED. Mode: {'DRY RUN' if self.dry_run else 'LIVE'}")
-        if not KRONOS_AVAILABLE:
-            logger.warning("⚠️ KRONOS NOT FOUND. Using simulation mode.")
 
     async def send_telegram_msg(self, message):
         if not self.telegram_token or not self.telegram_chat_id:
@@ -80,7 +75,8 @@ class PolymarketAlphaBot:
         try:
             with open(self.knowledge_base_path, "r") as f:
                 history = [json.loads(line) for line in f if line.strip()]
-            if len(history) < 3: return
+            if len(history) < 3:
+                return
             recent_trades = history[-5:]
             recent_wins = sum(1 for t in recent_trades if t['outcome'] == 'WIN')
             recent_loss_rate = (len(recent_trades) - recent_wins) / len(recent_trades)
@@ -92,13 +88,13 @@ class PolymarketAlphaBot:
             else:
                 self.current_edge_threshold = self.base_required_edge
                 self.current_multiplier = 1.0
-logger.info("✅ Strategy Stable: Resetting to base parameters.")
+                logger.info("✅ Strategy Stable: Resetting to base parameters.")
         except Exception as e:
             logger.error(f"Learning Error: {e}")
 
     async def autopsy_engine(self, trade_details, outcome):
         pnl = trade_details['pnl']
-        self.total_pnl += pnl
+self.total_pnl += pnl
         self.current_balance += pnl
         self.trades_count += 1
         if outcome == "WIN": self.wins += 1
@@ -130,8 +126,6 @@ logger.info("✅ Strategy Stable: Resetting to base parameters.")
         while True:
             try:
                 await self.adjust_strategy_from_memory()
-
-                # Simulation logic
                 if KRONOS_AVAILABLE and self.ml_engine:
                     logger.info("🤖 Querying KRONOS ML Model...")
                     prediction = self.ml_engine.predict_next_move()
@@ -182,7 +176,7 @@ if __name__ == "__main__":
     if t and c:
         try: print(f"Telegram Test: {requests.get(f'https://api.telegram.org/bot{t}/getMe', timeout=5).json()}")
         except Exception as e: print(f"Error: {e}")
-print("--- DIAGNOSTIC END ---")
+    print("--- DIAGNOSTIC END ---")
 
     bot = PolymarketAlphaBot()
     asyncio.run(bot.run_trading_cycle())
