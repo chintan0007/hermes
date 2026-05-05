@@ -122,4 +122,13 @@ if __name__ == "__main__":
         asyncio.run(bot.run_trading_cycle())
     except KeyboardInterrupt:
         logger.info("Bot stopped by user.")
+        import requests
+print("--- DIAGNOSTIC START ---")
+try:
+    test_res = requests.get(f"https://api.telegram.org/bot{os.getenv('TELEGRAM_TOKEN')}/getMe")
+    print(f"Telegram GetMe Result: {test_res.json()}")
+except Exception as e:
+    print(f"Diagnostic Error: {e}")
+print("--- DIAGNOSTIC END ---")
+
 
