@@ -3,6 +3,7 @@ import logging
 import json
 import os
 import requests
+import random  # Added for realistic signal simulation
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -27,9 +28,12 @@ class PolymarketAlphaBot:
         self.telegram_token = os.getenv("TELEGRAM_TOKEN")
         self.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
         
-        # Real-time tracking
-        self.current_balance = 1000.0  # In a live bot, this comes from the wallet
-        self.total_profit_loss = 0.0
+        # --- PRO TRACKING STATS ---
+        self.current_balance = 1000.0
+        self.total_pnl = 0.0
+        self.trades_count = 0
+        self.wins = 0
+        self.losses = 0
         
         logger.info(f"PRO BOT INITIALIZED. Mode: {'DRY RUN' if self.dry_run else 'LIVE'}")
 
@@ -44,29 +48,41 @@ class PolymarketAlphaBot:
             logger.error(f"Telegram Error: {e}")
 
     async def autopsy_engine(self, trade_details, outcome):
-        """Analyzes trade and calculates PnL."""
+        """Processes the result and updates performance stats."""
         pnl = trade_details['pnl']
-        self.total_profit_loss += pnl
+        self.total_pnl += pnl
         self.current_balance += pnl
+        self.trades_count += 1
         
-        status_emoji = "✅" if outcome == "WIN" else "❌"
-        
+        if outcome == "WIN":
+            self.wins += 1
+        else:
+            self.losses += 1
+
+        win_rate = (self.wins / self.trades_count) * 100
+
+        # --- BEAUTIFUL PROFESSIONAL REPORT ---
         report = (
-            f"{status_emoji} **TRADE COMPLETED**\n"
+            f"{'✅' if outcome == 'WIN' else '❌'} **TRADE {outcome}**\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"**Result:** `{outcome}`\n"
+            f"**Trade #{self.trades_count}**\n"
             f"**PnL:** `{pnl:+.2f} USD`\n"
-            f"**Total PnL:** `{self.total_profit_loss:+.2f} USD`\n"
-            f"**Current Balance:** `${self.current_balance:.2f}`\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"📊 **PERFORMANCE STATS**\n"
+            f"**Total Trades:** `{self.trades_count}`\n"
+            f"**Win Rate:** `{win_rate:.1f}%` ({self.wins}W / {self.losses}L)\n"
+            f"**Total PnL:** `{self.total_pnl:+.2f} USD`\n"
+            f"**Balance:** `${self.current_balance:.2f}`\n"
             f"━━━━━━━━━━━━━━━━━━"
         )
         
-        # Save to Knowledge Base
+        # Save to knowledge base
         entry = {
             "timestamp": datetime.now().isoformat(),
             "trade_id": trade_details['id'],
             "outcome": outcome,
-            "pnl": pnl
+            "pnl": pnl,
+            "win_rate": win_rate
         }
         with open(self.knowledge_base_path, "a") as f:
             f.write(json.dumps(entry) + "\n")
@@ -74,65 +90,65 @@ class PolymarketAlphaBot:
         await self.send_telegram_msg(report)
 
     async def run_trading_cycle(self):
-        """The High-Frequency Loop (No long sleeps)"""
         logger.info("Starting High-Frequency Monitoring...")
         
         while True:
             try:
-                # 1. SCAN MARKET (Simulated high-frequency check)
-                # In production, this would be a WebSocket listener
+                # --- THE STRATEGY FIX: RANDOMIZED SIGNAL ---
+                # We simulate a real market where signals are rare.
+                # A '0.1' means there is a 10% chance of a trade signal every loop.
+                if random.random() > 0.15: 
+                    # No signal this time, just sleep and check again
+                    await asyncio.sleep(10)
+                    continue
+
+                logger.info("🔥 SIGNAL DETECTED! Analyzing edge...")
+
+                # Simulate ML prediction
                 mock_prediction = {
                     "token_id": "0x123",
-                    "win_probability": 0.65,
-                    "edge": 0.10,
-"price": 0.60
+                    "win_probability": random.uniform(0.55, 0.75), # Random edge
+                    "edge": random.uniform(0.05, 0.15),
+                    "price": 0.60
                 }
-
-                # 2. RISK CHECK
+# Risk Check
                 proposed_size_pct = self.risk_manager.calculate_quarter_kelly(
                     self.current_balance, 
                     mock_prediction['win_probability'], 
                     mock_prediction['edge']
                 )
                 trade_amount = self.current_balance * proposed_size_pct
-
-                # 3. EXECUTE IF SIGNAL IS STRONG
-                if trade_amount > 5.0: # Minimum trade threshold
-                    logger.info(f"Executing Trade: ${trade_amount:.2f}")
-                    
-                    # TELEGRAM: Entry Report
+                
+                if trade_amount > 5.0:
+                    # 1. Notify Entry
                     entry_msg = (
                         f"🚀 **NEW TRADE OPENED**\n"
                         f"━━━━━━━━━━━━━━━━━━\n"
                         f"**Price:** `{mock_prediction['price']}`\n"
                         f"**Size:** `{trade_amount:.2f} USD`\n"
-                        f"**Total Invested:** `${trade_amount:.2f}`\n"
                         f"**Balance Left:** `${self.current_balance - trade_amount:.2f}`\n"
                         f"━━━━━━━━━━━━━━━━━━"
                     )
                     await self.send_telegram_msg(entry_msg)
-
-                    # Execute
+                    
+                    # 2. Execute
                     await self.executor.place_limit_order(
                         "0x123", "BUY", trade_amount, mock_prediction['price']
                     )
-
-                    # 4. SIMULATE OUTCOME (For testing)
-                    await asyncio.sleep(5) # Wait for trade to 'resolve'
                     
-                    # Mocking a win/loss for the demo
-                    outcome = "WIN"
-                    pnl = trade_amount * 0.10 # 10% profit
+                    # 3. Wait for market resolution (Simulated)
+                    await asyncio.sleep(5) 
+                    
+                    # 4. Simulate Outcome (Random Win/Loss)
+                    outcome = "WIN" if random.random() > 0.4 else "LOSS" # 60% win rate sim
+                    pnl = trade_amount * (0.10 if outcome == "WIN" else -0.08)
                     
                     await self.autopsy_engine(
-                        {"id": "T-101", "pnl": pnl}, 
+                        {"id": f"T-{self.trades_count+100}", "pnl": pnl}, 
                         outcome
                     )
-
-                # 5. THE "NO-SLEEP" FIX
-                # Instead of 5 minutes, we check every 10 seconds.
-                # This ensures we never miss a trade opportunity.
-                await asyncio.sleep(10) 
+                
+                await asyncio.sleep(10)
 
             except Exception as e:
                 logger.error(f"Loop Error: {e}")
@@ -141,11 +157,11 @@ class PolymarketAlphaBot:
 if __name__ == "__main__":
     # Diagnostic Check
     print("--- DIAGNOSTIC START ---")
-    t = os.getenv("TELEGRAM_TOKEN")
-    c = os.getenv("TELEGRAM_CHAT_ID")
-    if t and c:
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if token and chat_id:
         try:
-            print(f"Telegram Test: {requests.get(f'https://api.telegram.org/bot{t}/getMe', timeout=5).json()}")
+            print(f"Telegram Test: {requests.get(f'https://api.telegram.org/bot{token}/getMe', timeout=5).json()}")
         except Exception as e: print(f"Error: {e}")
     print("--- DIAGNOSTIC END ---")
 
