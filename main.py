@@ -82,7 +82,6 @@ class PolymarketAlphaBot:
         if not os.path.exists(self.knowledge_base_path):
             return
         try:
-            # SLIDING WINDOW: Only read last 20 entries to prevent memory leak
             recent_entries = []
             with open(self.knowledge_base_path, "r") as f:
                 lines = f.readlines()
@@ -103,7 +102,7 @@ class PolymarketAlphaBot:
                 self.current_edge_threshold = 0.05
                 self.current_multiplier = 1.0
                 logger.info("✅ Strategy Stable.")
-        except Exception as e:
+except Exception as e:
             logger.error(f"Learning Error: {e}")
 
     async def autopsy_engine(self, trade_details, outcome):
@@ -111,9 +110,11 @@ class PolymarketAlphaBot:
         self.total_pnl += pnl
         self.current_balance += pnl
         self.trades_count += 1
-if outcome == "WIN": self.wins += 1
-        else: self.losses += 1
-        
+        if outcome == "WIN":
+            self.wins += 1
+        else:
+            self.losses += 1
+            
         win_rate = (self.wins / self.trades_count) * 100
         entry = {
             "timestamp": datetime.now().isoformat(), 
@@ -141,6 +142,7 @@ if outcome == "WIN": self.wins += 1
                 await self.adjust_strategy_from_memory()
                 
                 if KRONOS_AVAILABLE and self.ml_engine:
+                    logger.info("🤖 Querying KRONOS...")
                     prediction = self.ml_engine.predict_next_move()
                 else:
                     await asyncio.sleep(1)
