@@ -97,8 +97,8 @@ class PolymarketAlphaBot:
             
             if loss_rate > 0.5:
                 self.current_edge_threshold = 0.10
-                self.current_multiplier = 0.5
-logger.warning("⚠️ LOSING STREAK: Tightening thresholds.")
+self.current_multiplier = 0.5
+                logger.warning("⚠️ LOSING STREAK: Tightening thresholds.")
             else:
                 self.current_edge_threshold = 0.05
                 self.current_multiplier = 1.0
