@@ -81,8 +81,10 @@ class PolymarketAlphaBot:
     async def adjust_strategy_from_memory(self):
         if not os.path.exists(self.knowledge_base_path):
             return
+        
+        # Simplified structure to prevent IndentationErrors
+        recent_entries = []
         try:
-            recent_entries = []
             with open(self.knowledge_base_path, "r") as f:
                 lines = f.readlines()
                 for line in reversed(lines[-20:]):
@@ -96,8 +98,8 @@ class PolymarketAlphaBot:
             loss_rate = (len(recent_entries) - recent_wins) / len(recent_entries)
             
             if loss_rate > 0.5:
-                self.current_edge_threshold = 0.10
-self.current_multiplier = 0.5
+self.current_edge_threshold = 0.10
+                self.current_multiplier = 0.5
                 logger.warning("⚠️ LOSING STREAK: Tightening thresholds.")
             else:
                 self.current_edge_threshold = 0.05
