@@ -89,7 +89,8 @@ class PolymarketAlphaBot:
                     if line.strip():
                         recent_entries.append(json.loads(line))
             
-            if len(recent_entries) < 3: return
+            if len(recent_entries) < 3: 
+                return
             
             recent_wins = sum(1 for t in recent_entries if t['outcome'] == 'WIN')
             loss_rate = (len(recent_entries) - recent_wins) / len(recent_entries)
@@ -97,12 +98,12 @@ class PolymarketAlphaBot:
             if loss_rate > 0.5:
                 self.current_edge_threshold = 0.10
                 self.current_multiplier = 0.5
-                logger.warning("⚠️ LOSING STREAK: Tightening thresholds.")
+logger.warning("⚠️ LOSING STREAK: Tightening thresholds.")
             else:
                 self.current_edge_threshold = 0.05
                 self.current_multiplier = 1.0
                 logger.info("✅ Strategy Stable.")
-except Exception as e:
+        except Exception as e:
             logger.error(f"Learning Error: {e}")
 
     async def autopsy_engine(self, trade_details, outcome):
